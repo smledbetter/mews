@@ -35,7 +35,7 @@ The published claim is therefore: *autonomous-loop A closes on dramatic drift; s
 
 - A Phoenix-as-a-product replacement. Phoenix uses SQLite (default) or PostgreSQL (production), never DuckDB. Mews benchmarks against DuckDB as the differential-validation oracle and the source paper's baseline; OpenInference (Phoenix's standardized span schema) is the representative real-world workload shape.
 - Vendor-economics claims about specific platforms — those need partnership data this corpus doesn't license.
-- Ad-hoc analyst exploration — Mews assumes stable query templates, schema-locked input, and per-tenant data partitioning.
+- Ad-hoc analyst exploration — Mews assumes a stable query template, schema-locked input, and per-tenant data partitioning.
 - Cross-tenant aggregations — per-tenant compilation works against you when the natural query spans tenants.
 - Single fat tenant on a 64+ GB host — just use DuckDB; Mews's lower-RSS isn't load-bearing there.
 
@@ -119,7 +119,9 @@ examples/                  # reference outputs + driver scripts
 
 ## Quickstart
 
-See [setup.md](setup.md) for full setup. Once you have `ANTHROPIC_API_KEY`, the BespokeOLAP fork at `BESPOKE_ROOT`, and an OpenInference parquet:
+> **This is a reproduction recipe, not a clean-clone smoke test.** Mews depends on a Mews-specific BespokeOLAP fork (`mews-gate-0` branch, 10 patches on top of upstream) that has not been published publicly yet, and on pre-minted `x10`/`x100`/`x500` OpenInference parquets that the adapters in `adapters/` produce. Reading this repo, the `infra/` modules, and the `examples/g8-cycle-1/` artifact set works against a clean clone; running Stage-3 end-to-end does not. See [setup.md](setup.md) for the full dependency state.
+
+Once those prerequisites are in place:
 
 ```sh
 uv run python examples/g7-loop.py --run-dir /tmp/mews-g7-run

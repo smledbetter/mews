@@ -8,10 +8,15 @@
    `libarrow` + `libparquet` development headers (`pkg-config --cflags --libs arrow parquet` should resolve).
 4. **DuckDB** (Python lib via `requirements.txt`; also useful as a CLI for ad-hoc inspection).
 5. **The BespokeOLAP fork.** Mews vendors and adapts the [DataManagementLab/BespokeOLAP](https://github.com/DataManagementLab/BespokeOLAP) agent loop.
-   Clone it as a sibling of this repo (or anywhere; point `BESPOKE_ROOT` env var at it):
+
+   > **Note:** Mews depends on a Mews-specific fork of BespokeOLAP that is **not yet published publicly.** The fork sits on a `mews-gate-0` branch with 10 patches on top of upstream merge-base `8f077ff825aec56f08ed5290251a53706b458258`. The patches add the lockin marker plumbing, the `--arm-lockin-pre` flag, and the substantive-success exit code (3) handling that Mews's runner.py imports. A clean clone of upstream BespokeOLAP without these patches will fail to satisfy the imports at the top of `infra/runner.py` and `infra/tools/lockin_apply_patch.py`.
+   >
+   > Until the fork is pushed (tracking item — this is a known gap), reproducing Mews end-to-end requires access to that branch. Reading the code, the `examples/g8-cycle-1/` artifact set, and the `infra/` modules works against this clone today; running Stage-3 does not.
+
+   When the fork is published, clone it as a sibling of this repo (or anywhere; point `BESPOKE_ROOT` env var at it):
 
    ```sh
-   git clone https://github.com/DataManagementLab/BespokeOLAP.git ./upstream/BespokeOLAP
+   git clone -b mews-gate-0 <fork-url> ./upstream/BespokeOLAP
    ```
 
    The Python deps Mews relies on from BespokeOLAP are the agents-SDK shell tool, the LiteLLM model wrapper, and the apply_patch tool — all imported at runtime from `BESPOKE_ROOT`.
@@ -34,7 +39,7 @@ Useful env vars (all optional, with sensible defaults):
 | `BESPOKE_ROOT` | `$MEWS_ROOT/upstream/BespokeOLAP` | BespokeOLAP fork location |
 | `UV_BIN` | `uv` (assumes on PATH) | Path to the uv binary |
 | `ANTHROPIC_API_KEY` | — required for Stage-3 — | LiteLLM/Anthropic auth |
-| `OPENAI_API_KEY` | placeholder | Required by openai-agents SDK; any non-empty string works in Anthropic-only setup |
+| `OPENAI_API_KEY` | placeholder | The openai-agents SDK initializes an OpenAI client at import time even when routing to Anthropic via LiteLLM; any non-empty string satisfies that import. Mews never makes an OpenAI API call. |
 
 ## Data adapters
 
@@ -50,6 +55,8 @@ cd adapters/swerebench && uv run --with pyarrow python adapt.py
 Each writes a `spans.parquet` to the adapter's `output/` directory.
 
 ## Running a Stage-3 synthesis
+
+> **Reproduction recipe, not a clean-clone smoke test.** Stage-3 runs against an OpenInference-shaped parquet that is not in this repo (mint via `adapters/`), and depends on the unpublished BespokeOLAP fork above. The command below documents what the orchestrator runs; it will not work end-to-end on a clean clone today.
 
 ```sh
 export MEWS_ROOT=/path/to/mews
@@ -69,6 +76,11 @@ uv run python infra/runner.py \
     --arm-lockin-pre
 ```
 
+Notes on the invocation:
+
+- **Stage-3 runs with `cwd=$BESPOKE_ROOT`**, not the Mews repo root. The agent loop, lockin marker, and apply_patch tool all resolve paths relative to the BespokeOLAP fork; the Mews orchestrator hands it absolute paths into `--workspace`.
+- **`--validation-tenants` values are dataset-specific.** `China,United States,Russia` is the locked tenant triple for the **WildChat** OpenInference-shaped parquet — three high-volume, well-distributed tenants used for differential validation. The HELM and SWE-rebench adapters partition along different axes (model name, repo) — pick three high-volume partition values from whichever `spans.parquet` you minted.
+
 Exit codes:
 - `0` — agent yielded; engine validates clean
 - `1` — exception or MaxTurnsExceeded with invalid artifact
@@ -76,6 +88,8 @@ Exit codes:
 - `3` — MaxTurnsExceeded but engine validates clean (substantive success)
 
 ## Running the autonomous loop
+
+Same caveat as above — these are reproduction recipes that depend on the unpublished BespokeOLAP fork plus pre-minted `x10` / `x100` / `x500` parquets.
 
 ```sh
 # G7-style single-cycle (one drift event):
@@ -85,7 +99,7 @@ uv run python examples/g7-loop.py --run-dir /tmp/mews-g7-run
 uv run python examples/g8-loop.py --run-dir /tmp/mews-g8-run
 ```
 
-The G7/G8 driver scripts are the deterministic outer orchestrator; Stage-3 is the only LLM-driven step. See `examples/g8-cycle-1/` for what one closed cycle's outputs look like (orchestrator log, manifests, drift detector reports).
+The G7/G8 driver scripts are the deterministic outer orchestrator; Stage-3 is the only LLM-driven step. See `examples/g8-cycle-1/` for what one closed cycle's outputs look like (orchestrator log, manifests, drift detector reports) — that artifact set is the closest thing to a "what does success look like" reference until the fork is published.
 
 ## Reproducibility notes
 
