@@ -50,9 +50,31 @@ cd adapters/swerebench && uv run --with pyarrow python adapt.py
 
 Each writes a `spans.parquet` to the adapter's `output/` directory.
 
+### `xN` benchmark replicas
+
+The autonomous-loop benches need `x10` / `x100` / `x500` replicas of the base `spans.parquet`. `adapters/replicate.py` streams a parquet through with `_k{idx}` suffixes on `span_id`, `parent_id`, and `trace_id` per copy, so the locked self-join doesn't cross-product across replicas (the join on `(parent_id, tenant_id)` stays within-copy).
+
+```sh
+uv run --with pyarrow python adapters/replicate.py \
+    --in adapters/wildchat/output/spans.parquet \
+    --out adapters/wildchat/output/spans-x100.parquet \
+    --factor 100
+```
+
+### Drift inducers
+
+`adapters/inducers/mint.py` produces the four drift parquets the autonomous loop runs against (extra column, renamed tenant column, type-cast `start_time`, China-10x cardinality bump) plus a `baseline-schema.json` snapshot the drift detector uses as the synthesis-time reference.
+
+```sh
+uv run --with pyarrow python adapters/inducers/mint.py \
+    --src adapters/wildchat/output/spans.parquet \
+    --out-dir adapters/wildchat/output/inducers/ \
+    --prefix wildchat-x1
+```
+
 ## Running a Stage-3 synthesis
 
-> **Reproduction recipe.** Stage-3 runs against an OpenInference-shaped parquet that is not in this repo (mint via `adapters/`). The autonomous-loop benches additionally need pre-minted `x10` / `x100` / `x500` replicas; the minter script will land in this repo with the blog post.
+> **Reproduction recipe.** Stage-3 runs against an OpenInference-shaped parquet that is not in this repo (mint via `adapters/`). The autonomous-loop benches additionally need pre-minted `x10` / `x100` / `x500` replicas via `adapters/replicate.py` (see "`xN` benchmark replicas" above).
 
 ```sh
 export MEWS_ROOT=/path/to/mews
@@ -100,5 +122,5 @@ The G7/G8 driver scripts are the deterministic outer orchestrator; Stage-3 is th
 ## Reproducibility notes
 
 - The 75-turn budget is documented in `gate-7-first-autonomous-regen` and `gate-8-sustained-loop` writeups in the project vault. Two-thirds of cycles close inside that budget on dramatic drift; subtle data-shape drift may not (see [README §"Honest scope"](README.md#honest-scope)).
-- The canonical bench parquet sizes (`x10`, `x100`, `x500`) are minted by replicating the base `spans.parquet` with mutated span/parent/trace ids; a minter script will land in this repo when the blog post is written.
+- The canonical bench parquet sizes (`x10`, `x100`, `x500`) are minted by `adapters/replicate.py`, which suffixes span/parent/trace ids per copy.
 - The differential-validation oracle is DuckDB on the same parquet. If you change the locked query in `contracts/openinference/queries/`, the oracle changes accordingly.

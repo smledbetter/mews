@@ -103,7 +103,9 @@ contracts/openinference/   # locked OpenInference query + schema contract
 adapters/                  # public-data → OpenInference parquet adapters
 ├── wildchat/              # 838K real chat conversations (ODC-BY)
 ├── helm/                  # 104K eval scenario runs (real timestamps)
-└── swerebench/            # 67K agent trajectories with native tool calls
+├── swerebench/            # 67K agent trajectories with native tool calls
+├── replicate.py           # mint xN benchmark parquets with unique IDs per copy
+└── inducers/mint.py       # mint schema/cardinality drift parquets
 
 examples/                  # reference outputs + driver scripts
 ├── canonical-engine.cpp   # one Stage-3 output (~11 KB synthesized C++)
@@ -119,7 +121,7 @@ examples/                  # reference outputs + driver scripts
 
 ## Quickstart
 
-> **This is a reproduction recipe.** Mews depends on the [smledbetter/BespokeOLAP](https://github.com/smledbetter/BespokeOLAP) fork on the `mews-gate-0` branch (10 patches on top of upstream — clone instructions in [setup.md](setup.md)) and on pre-minted `x10` / `x100` / `x500` OpenInference parquets. The adapters in `adapters/` mint a base `spans.parquet`; the `xN` replication minter script will land in this repo with the blog post.
+> **This is a reproduction recipe.** Mews depends on the [smledbetter/BespokeOLAP](https://github.com/smledbetter/BespokeOLAP) fork on the `mews-gate-0` branch (10 patches on top of upstream — clone instructions in [setup.md](setup.md)) and on pre-minted `x10` / `x100` / `x500` OpenInference parquets. The adapters in `adapters/` mint a base `spans.parquet`; `adapters/replicate.py` produces the `xN` replicas with unique span/parent/trace ids per copy; `adapters/inducers/mint.py` produces the schema- and cardinality-perturbed parquets the autonomous loop runs against.
 
 Once those prerequisites are in place:
 
