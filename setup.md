@@ -7,16 +7,12 @@
 3. **C++ toolchain**: `g++` (or `clang++`) supporting `-std=c++20`, plus
    `libarrow` + `libparquet` development headers (`pkg-config --cflags --libs arrow parquet` should resolve).
 4. **DuckDB** (Python lib via `requirements.txt`; also useful as a CLI for ad-hoc inspection).
-5. **The BespokeOLAP fork.** Mews vendors and adapts the [DataManagementLab/BespokeOLAP](https://github.com/DataManagementLab/BespokeOLAP) agent loop.
+5. **The BespokeOLAP fork.** Mews depends on a Mews-specific fork of [DataManagementLab/BespokeOLAP](https://github.com/DataManagementLab/BespokeOLAP), published at [smledbetter/BespokeOLAP](https://github.com/smledbetter/BespokeOLAP) on the `mews-gate-0` branch (10 patches on top of upstream merge-base `8f077ff825aec56f08ed5290251a53706b458258`). The patches add the lockin marker plumbing, the `--arm-lockin-pre` flag, and the substantive-success exit code (3) handling that Mews's `runner.py` imports — a clean clone of upstream without these patches will fail to satisfy the imports at the top of `infra/runner.py` and `infra/tools/lockin_apply_patch.py`.
 
-   > **Note:** Mews depends on a Mews-specific fork of BespokeOLAP that is **not yet published publicly.** The fork sits on a `mews-gate-0` branch with 10 patches on top of upstream merge-base `8f077ff825aec56f08ed5290251a53706b458258`. The patches add the lockin marker plumbing, the `--arm-lockin-pre` flag, and the substantive-success exit code (3) handling that Mews's runner.py imports. A clean clone of upstream BespokeOLAP without these patches will fail to satisfy the imports at the top of `infra/runner.py` and `infra/tools/lockin_apply_patch.py`.
-   >
-   > Until the fork is pushed (tracking item — this is a known gap), reproducing Mews end-to-end requires access to that branch. Reading the code, the `examples/g8-cycle-1/` artifact set, and the `infra/` modules works against this clone today; running Stage-3 does not.
-
-   When the fork is published, clone it as a sibling of this repo (or anywhere; point `BESPOKE_ROOT` env var at it):
+   Clone it as a sibling of this repo (or anywhere; point `BESPOKE_ROOT` env var at it):
 
    ```sh
-   git clone -b mews-gate-0 <fork-url> ./upstream/BespokeOLAP
+   git clone -b mews-gate-0 https://github.com/smledbetter/BespokeOLAP.git ./upstream/BespokeOLAP
    ```
 
    The Python deps Mews relies on from BespokeOLAP are the agents-SDK shell tool, the LiteLLM model wrapper, and the apply_patch tool — all imported at runtime from `BESPOKE_ROOT`.
@@ -56,7 +52,7 @@ Each writes a `spans.parquet` to the adapter's `output/` directory.
 
 ## Running a Stage-3 synthesis
 
-> **Reproduction recipe, not a clean-clone smoke test.** Stage-3 runs against an OpenInference-shaped parquet that is not in this repo (mint via `adapters/`), and depends on the unpublished BespokeOLAP fork above. The command below documents what the orchestrator runs; it will not work end-to-end on a clean clone today.
+> **Reproduction recipe.** Stage-3 runs against an OpenInference-shaped parquet that is not in this repo (mint via `adapters/`). The autonomous-loop benches additionally need pre-minted `x10` / `x100` / `x500` replicas; the minter script will land in this repo with the blog post.
 
 ```sh
 export MEWS_ROOT=/path/to/mews
@@ -89,7 +85,7 @@ Exit codes:
 
 ## Running the autonomous loop
 
-Same caveat as above — these are reproduction recipes that depend on the unpublished BespokeOLAP fork plus pre-minted `x10` / `x100` / `x500` parquets.
+Same caveat as above — these depend on pre-minted `x10` / `x100` / `x500` parquets that aren't in the repo yet.
 
 ```sh
 # G7-style single-cycle (one drift event):

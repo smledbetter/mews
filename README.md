@@ -119,7 +119,7 @@ examples/                  # reference outputs + driver scripts
 
 ## Quickstart
 
-> **This is a reproduction recipe, not a clean-clone smoke test.** Mews depends on a Mews-specific BespokeOLAP fork (`mews-gate-0` branch, 10 patches on top of upstream) that has not been published publicly yet, and on pre-minted `x10`/`x100`/`x500` OpenInference parquets that the adapters in `adapters/` produce. Reading this repo, the `infra/` modules, and the `examples/g8-cycle-1/` artifact set works against a clean clone; running Stage-3 end-to-end does not. See [setup.md](setup.md) for the full dependency state.
+> **This is a reproduction recipe.** Mews depends on the [smledbetter/BespokeOLAP](https://github.com/smledbetter/BespokeOLAP) fork on the `mews-gate-0` branch (10 patches on top of upstream — clone instructions in [setup.md](setup.md)) and on pre-minted `x10` / `x100` / `x500` OpenInference parquets. The adapters in `adapters/` mint a base `spans.parquet`; the `xN` replication minter script will land in this repo with the blog post.
 
 Once those prerequisites are in place:
 
