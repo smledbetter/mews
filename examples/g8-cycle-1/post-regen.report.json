@@ -1,0 +1,28 @@
+{
+  "ts_utc": "2026-04-30T13:30:08+00:00",
+  "tenants_checked": [
+    "China",
+    "United States",
+    "Russia"
+  ],
+  "parquet": "/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet",
+  "engine": "/home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine",
+  "schema_status": "MATCH",
+  "schema_drift": {},
+  "correctness_status": "MATCH",
+  "correctness_drift_per_tenant": {
+    "China": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+  },
+  "perf_status": "OK",
+  "perf_engine_ms": 167.80828300397843,
+  "perf_duckdb_ms": 626.356,
+  "perf_baseline_engine_ms": null,
+  "perf_baseline_ratio_threshold": 1.5,
+  "regen_recommended": false,
+  "regen_reason": "none",
+  "notes": [
+    "engine_ms / duckdb_ms = 0.27 (threshold 1.5); engine still beats DuckDB"
+  ]
+}

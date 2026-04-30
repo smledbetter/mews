@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+.env
+
+# Build artifacts
+*.so
+*.dylib
+*.dll
+*.o
+
+# Generated data (reproducible from adapters/)
+*.parquet
+*.csv
+!examples/**/*.csv
+
+# Workspace state from synthesis runs (transient, do not commit)
+regen-ws/
+.lockin_armed
+.lockin/
+.lockin_*.json
+.synthesis_schema.json
+
+# Per-run outputs (commit one curated demo set in examples/, not these)
+manifest.json
+!examples/**/manifest.json
+!examples/**/manifest_stage3.json
+result1*.csv
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local secrets (just in case)
+.env.local
+*.pem
+*.key

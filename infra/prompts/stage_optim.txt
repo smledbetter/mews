@@ -1,0 +1,83 @@
+Stage 3 of 3: optimization loop.
+
+You start with a working engine.cpp + compiled engine binary that PASSes
+multi-tenant `validate_all.py` against the small parquet at {{PARQUET_PATH}}.
+Verify by running validate_all.py once and confirming OVERALL: PASS before
+making any edits. The engine is correct; your job is to make it faster
+and bound its memory while keeping it correct.
+
+Targets:
+    bench_wall_at_x100  < 1000 ms
+    peak_rss_at_x100    < 500 MB (= 500000 KB in /usr/bin/time -f "%M")
+    AND validate_all.py at {{PARQUET_PATH}} still reports OVERALL: PASS.
+
+Reach BOTH targets, then yield.
+
+Bench parquets are pre-staged at increasing scales of {{PARQUET_PATH}}, e.g.:
+    <cliff-data-dir>/wildchat-x10.parquet     ( 37 MB,    402k rows)
+    <cliff-data-dir>/wildchat-x100.parquet    (370 MB,    4.0M rows)
+    <cliff-data-dir>/wildchat-x500.parquet    (1.85 GB,    20M rows)
+    <cliff-data-dir>/wildchat-x1000.parquet   (3.7 GB,     40M rows)
+Each replica preserves tenant_ids ({{VALIDATION_TENANTS_LIST}}) and uses unique
+span_ids/parent_ids per copy, so the join produces linearly-scaled n values.
+The full path to the canonical bench parquet at the target scale is
+{{BENCH_PARQUET_PATH}}.
+
+Bench command (writes result1.csv; %e = wall seconds, %M = peak RSS in KB):
+    /usr/bin/time -f "%e %M" ./engine '{{TENANT_ID}}' '{{BENCH_PARQUET_PATH}}'
+
+Validate command (correctness gate):
+    uv run python {{MEWS_ROOT}}/infra/validate_all.py \
+        --workspace . --parquet '{{PARQUET_PATH}}' --tenants '{{VALIDATION_TENANTS}}'
+
+Compile:
+    g++ -O3 -march=native -std=c++20 -o engine engine.cpp $(pkg-config --cflags --libs arrow parquet)
+
+Iteration loop (yours to choose; one common pattern):
+    1. Bench. Profile if you don't already know what's slow.
+    2. Apply ONE focused change via apply_patch.
+    3. Recompile + validate (lockin enforces this on every engine.cpp edit).
+    4. Rebench. If faster, keep. If correctness regression, lockin auto-reverts.
+
+Profiling tool (use to identify hot functions before patching):
+    perf_profile <tenant_id> [parquet_path]
+Run from your workspace dir. Builds an instrumented copy of engine.cpp and
+returns the gprof flat profile + call graph. Best signal at moderate scale
+(x10 or x100 parquet); skip x1 (too short) and x1000 (too slow).
+Note: gprof attributes time to YOUR code (functions in engine.cpp).
+A gap between bench wall and gprof's total self-time indicates time spent
+inside libraries (libarrow, libparquet, libsnappy) — those bottlenecks
+won't show as named functions; you can supplement with std::chrono blocks
+in engine.cpp around suspected library calls.
+
+Lock-in enforcement (automatic, not opt-out):
+    Every apply_patch on engine.cpp triggers: snapshot → apply → recompile
+    → validate_all.py → revert if FAIL. When you see "PATCH REVERTED
+    (lockin): validate_all.py did not OVERALL: PASS", the prior engine.cpp
+    has been restored. Diagnose the regression and try a different fix;
+    do not retry the same edit.
+
+Anti-spec-gaming (the sandbox catches these; do not):
+    - Do NOT modify validate_all.py, validate.py, or any file outside the workspace.
+    - Do NOT run sudo for any reason.
+    - Do NOT assume an OOM unless explicit "Killed" or "MemoryError" appears.
+    - If validation fails, the bug is in your engine, not the validator.
+    - If a tool returns "TOOL_ERROR (recoverable, no state change): ...",
+      the sandbox refused something. Read the message, choose a different
+      approach, do not retry the same call.
+
+Constraints (do not change):
+    - Schema declaration shape.
+    - Locked reference query semantics.
+    - CSV output: model_name,n,p50_ms,p95_ms with header, ordered by p95_ms DESC.
+    - Engine CLI: `./engine <tenant_id> [optional parquet_path]`.
+
+Turn budget: {{MAX_TURNS}} turns. Reserve final 5 turns for clean shutdown.
+
+Done condition: BOTH targets met AND validate at {{PARQUET_PATH}} PASSes. Print:
+    STAGE 3 DONE: wall_x100=Xms rss_x100=YMB validate_x1=PASS
+and yield. Do NOT continue optimizing past the targets.
+
+If you cannot meet both targets within the turn budget: report your best
+numbers, confirm validate still PASSes, and yield. Better to ship known
+progress than exhaust turns.

@@ -1,0 +1,148 @@
+[2026-04-30T13:03:11+00:00] baseline_schema initialized: /home/dev/projects/mews/experiments/gate-8/run-1/baseline-schema.json
+[2026-04-30T13:03:11+00:00] deployed/ initialized with silent run-3 engine (cycle-1 starting state)
+[2026-04-30T13:03:11+00:00] ==============================================================================
+[2026-04-30T13:03:11+00:00] >>> CYCLE 1: CORRECTNESS DRIFT (silent run-3 engine + wildchat-x10)
+[2026-04-30T13:03:11+00:00] ==============================================================================
+[2026-04-30T13:03:11+00:00] ==============================================================================
+[2026-04-30T13:03:11+00:00] CYCLE cycle-1-correctness START
+[2026-04-30T13:03:11+00:00]   deployed_ws=/home/dev/projects/mews/experiments/gate-8/run-1/deployed
+[2026-04-30T13:03:11+00:00]   regen_seed_engine=/home/dev/projects/mews/experiments/gate-4/stage3-run2-opus/output/engine
+[2026-04-30T13:03:11+00:00]   trigger_parquet=/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet
+[2026-04-30T13:03:11+00:00] ==============================================================================
+[2026-04-30T13:03:11+00:00] --- cycle-1-correctness pre-regen: drift detector ---
+[2026-04-30T13:03:11+00:00]   cmd: /home/dev/.local/bin/uv run --with pyarrow --with duckdb python /home/dev/projects/mews/infra/drift_detector.py --engine /home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine --workspace /home/dev/projects/mews/experiments/gate-8/run-1/deployed --parquet /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet --tenants China,United States,Russia --baseline-schema /home/dev/projects/mews/experiments/gate-8/run-1/baseline-schema.json --perf-tenant China --perf-iters 3 --out /home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/pre-regen.report.json
+[2026-04-30T13:03:32+00:00]   exit=1
+[2026-04-30T13:03:32+00:00]   stdout (last 600ch):
+
+  "schema_drift": {},
+  "correctness_status": "DRIFT",
+  "correctness_drift_per_tenant": {
+    "China": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+    "United States": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+    "Russia": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches"
+  },
+  "perf_status": "UNCHECKED",
+  "perf_engine_ms": null,
+  "perf_duckdb_ms": null,
+  "perf_baseline_engine_ms": null,
+  "perf_baseline_ratio_threshold": 1.5,
+  "regen_recommended": true,
+  "regen_reason": "correctness",
+  "notes": [
+    "correctness drift; perf check skipped"
+  ]
+}
+
+[2026-04-30T13:03:32+00:00]   pre-regen verdict: schema=MATCH correctness=DRIFT regen=True/correctness
+[2026-04-30T13:03:32+00:00] --- regen: Stage-3 synthesis ---
+[2026-04-30T13:03:32+00:00]   regen_ws=/home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/regen-ws
+[2026-04-30T13:03:32+00:00]   log_dir=/home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/regen-log
+[2026-04-30T13:03:32+00:00]   cmd: /home/dev/.local/bin/uv run python /home/dev/projects/mews/infra/runner.py --stage 3 --tenant China --workspace /home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/regen-ws --log-dir /home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/regen-log --max-turns 75 --model litellm/anthropic/claude-opus-4-6 --parquet /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x1.parquet --parquet-x10 /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet --bench-parquet /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x100.parquet --bench-tenant China --validation-tenants China,United States,Russia --arm-lockin-pre
+[2026-04-30T13:30:08+00:00]   Stage-3 exit=3  cost=$31.35
+[2026-04-30T13:30:08+00:00]   artifact_ok=True (runner.py exit 3: substantive success (MaxTurnsExceeded but artifact validates clean))
+[2026-04-30T13:30:08+00:00] --- deploy: copy regen engine -> deployed/ ---
+[2026-04-30T13:30:08+00:00] --- cycle-1-correctness post-regen: drift detector ---
+[2026-04-30T13:30:08+00:00]   cmd: /home/dev/.local/bin/uv run --with pyarrow --with duckdb python /home/dev/projects/mews/infra/drift_detector.py --engine /home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine --workspace /home/dev/projects/mews/experiments/gate-8/run-1/deployed --parquet /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet --tenants China,United States,Russia --baseline-schema /home/dev/projects/mews/experiments/gate-8/run-1/baseline-schema.json --perf-tenant China --perf-iters 3 --out /home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/post-regen.report.json
+[2026-04-30T13:30:45+00:00]   exit=0
+[2026-04-30T13:30:45+00:00]   stdout (last 600ch):
+chema_drift": {},
+  "correctness_status": "MATCH",
+  "correctness_drift_per_tenant": {
+    "China": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+  },
+  "perf_status": "OK",
+  "perf_engine_ms": 167.80828300397843,
+  "perf_duckdb_ms": 626.356,
+  "perf_baseline_engine_ms": null,
+  "perf_baseline_ratio_threshold": 1.5,
+  "regen_recommended": false,
+  "regen_reason": "none",
+  "notes": [
+    "engine_ms / duckdb_ms = 0.27 (threshold 1.5); engine still beats DuckDB"
+  ]
+}
+
+[2026-04-30T13:30:45+00:00]   post-regen verdict: schema=MATCH correctness=MATCH regen=False/none
+[2026-04-30T13:30:45+00:00] ==============================================================================
+[2026-04-30T13:30:45+00:00] CYCLE cycle-1-correctness END: closed=True wall=1654s cost=$31.35
+[2026-04-30T13:30:45+00:00] ==============================================================================
+[2026-04-30T13:30:45+00:00] ------------------------------------------------------------------------------
+[2026-04-30T13:30:45+00:00] >>> BASELINE CHECK (baseline-1): no inducer change, expect MATCH
+[2026-04-30T13:30:45+00:00] ------------------------------------------------------------------------------
+[2026-04-30T13:30:45+00:00] ==============================================================================
+[2026-04-30T13:30:45+00:00] CYCLE baseline-1 START
+[2026-04-30T13:30:45+00:00]   deployed_ws=/home/dev/projects/mews/experiments/gate-8/run-1/deployed
+[2026-04-30T13:30:45+00:00]   regen_seed_engine=/home/dev/projects/mews/experiments/gate-4/stage3-run2-opus/output/engine
+[2026-04-30T13:30:45+00:00]   trigger_parquet=/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet
+[2026-04-30T13:30:45+00:00] ==============================================================================
+[2026-04-30T13:30:45+00:00] --- baseline-1 pre-regen: drift detector ---
+[2026-04-30T13:30:45+00:00]   cmd: /home/dev/.local/bin/uv run --with pyarrow --with duckdb python /home/dev/projects/mews/infra/drift_detector.py --engine /home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine --workspace /home/dev/projects/mews/experiments/gate-8/run-1/deployed --parquet /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet --tenants China,United States,Russia --baseline-schema /home/dev/projects/mews/experiments/gate-8/run-1/baseline-schema.json --perf-tenant China --perf-iters 3 --out /home/dev/projects/mews/experiments/gate-8/run-1/baseline-1/pre-regen.report.json
+[2026-04-30T13:31:22+00:00]   exit=0
+[2026-04-30T13:31:22+00:00]   stdout (last 600ch):
+chema_drift": {},
+  "correctness_status": "MATCH",
+  "correctness_drift_per_tenant": {
+    "China": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+  },
+  "perf_status": "OK",
+  "perf_engine_ms": 182.72616702597588,
+  "perf_duckdb_ms": 649.834,
+  "perf_baseline_engine_ms": null,
+  "perf_baseline_ratio_threshold": 1.5,
+  "regen_recommended": false,
+  "regen_reason": "none",
+  "notes": [
+    "engine_ms / duckdb_ms = 0.28 (threshold 1.5); engine still beats DuckDB"
+  ]
+}
+
+[2026-04-30T13:31:22+00:00]   pre-regen verdict: schema=MATCH correctness=MATCH regen=False/none
+[2026-04-30T13:31:22+00:00] cycle: no drift detected; nothing to regen (idle)
+[2026-04-30T13:31:22+00:00] ==============================================================================
+[2026-04-30T13:31:22+00:00] >>> CYCLE 2: CARDINALITY DRIFT (wildchat-x1-china-10x.parquet)
+[2026-04-30T13:31:22+00:00] ==============================================================================
+[2026-04-30T13:31:22+00:00] ==============================================================================
+[2026-04-30T13:31:22+00:00] CYCLE cycle-2-cardinality START
+[2026-04-30T13:31:22+00:00]   deployed_ws=/home/dev/projects/mews/experiments/gate-8/run-1/deployed
+[2026-04-30T13:31:22+00:00]   regen_seed_engine=/home/dev/projects/mews/experiments/gate-4/stage3-run2-opus/output/engine
+[2026-04-30T13:31:22+00:00]   trigger_parquet=/home/dev/projects/mews/experiments/gate-6/inducers/wildchat-x1-china-10x.parquet
+[2026-04-30T13:31:22+00:00] ==============================================================================
+[2026-04-30T13:31:22+00:00] --- cycle-2-cardinality pre-regen: drift detector ---
+[2026-04-30T13:31:22+00:00]   cmd: /home/dev/.local/bin/uv run --with pyarrow --with duckdb python /home/dev/projects/mews/infra/drift_detector.py --engine /home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine --workspace /home/dev/projects/mews/experiments/gate-8/run-1/deployed --parquet /home/dev/projects/mews/experiments/gate-6/inducers/wildchat-x1-china-10x.parquet --tenants China,United States,Russia --baseline-schema /home/dev/projects/mews/experiments/gate-8/run-1/baseline-schema.json --perf-tenant China --perf-iters 3 --out /home/dev/projects/mews/experiments/gate-8/run-1/cycle-2-cardinality/pre-regen.report.json
+[2026-04-30T13:31:30+00:00]   exit=1
+[2026-04-30T13:31:30+00:00]   stdout (last 600ch):
+hema_status": "MATCH",
+  "schema_drift": {},
+  "correctness_status": "DRIFT",
+  "correctness_drift_per_tenant": {
+    "China": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+    "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+    "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+  },
+  "perf_status": "UNCHECKED",
+  "perf_engine_ms": null,
+  "perf_duckdb_ms": null,
+  "perf_baseline_engine_ms": null,
+  "perf_baseline_ratio_threshold": 1.5,
+  "regen_recommended": true,
+  "regen_reason": "correctness",
+  "notes": [
+    "correctness drift; perf check skipped"
+  ]
+}
+
+[2026-04-30T13:31:30+00:00]   pre-regen verdict: schema=MATCH correctness=DRIFT regen=True/correctness
+[2026-04-30T13:31:30+00:00] --- regen: Stage-3 synthesis ---
+[2026-04-30T13:31:30+00:00]   regen_ws=/home/dev/projects/mews/experiments/gate-8/run-1/cycle-2-cardinality/regen-ws
+[2026-04-30T13:31:30+00:00]   log_dir=/home/dev/projects/mews/experiments/gate-8/run-1/cycle-2-cardinality/regen-log
+[2026-04-30T13:31:30+00:00]   cmd: /home/dev/.local/bin/uv run python /home/dev/projects/mews/infra/runner.py --stage 3 --tenant China --workspace /home/dev/projects/mews/experiments/gate-8/run-1/cycle-2-cardinality/regen-ws --log-dir /home/dev/projects/mews/experiments/gate-8/run-1/cycle-2-cardinality/regen-log --max-turns 75 --model litellm/anthropic/claude-opus-4-6 --parquet /home/dev/projects/mews/experiments/gate-6/inducers/wildchat-x1-china-10x.parquet --parquet-x10 /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet --bench-parquet /home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x100.parquet --bench-tenant China --validation-tenants China,United States,Russia --arm-lockin-pre
+[2026-04-30T13:58:42+00:00]   Stage-3 exit=1  cost=$18.12
+[2026-04-30T13:58:42+00:00] --- post-Stage-3 substantive validation ---
+[2026-04-30T13:58:49+00:00]   x1: exit=1 FAIL
+[2026-04-30T13:58:49+00:00]   artifact_ok=False (validate_all.py at x1 did not PASS)
+[2026-04-30T13:58:49+00:00] KILL CYCLE: regen artifact failed substantive validation
+[2026-04-30T13:58:49+00:00] NO RETRY cycle-2-cardinality: artifact validation failed (Stage-3 stack regression)

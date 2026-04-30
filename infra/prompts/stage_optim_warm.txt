@@ -1,0 +1,133 @@
+Stage 3 of 3: optimization loop — long-lived engine variant.
+
+You start with a working engine.cpp + compiled engine binary that PASSes
+multi-tenant `validate_all.py` against the small parquet at {{PARQUET_PATH}}.
+Verify by running validate_all.py once and confirming OVERALL: PASS before
+making any edits. The engine is correct in cold (one-shot) mode; your job
+is to extend it to support a long-lived "server" mode while keeping the
+existing cold-mode behavior intact and correct.
+
+Why this matters: in cold mode the engine pays parquet I/O on every
+invocation. A long-lived process that ingests parquet once and answers
+many queries on stdin amortizes that cost across queries. Whether
+amortization actually wins is an empirical question for a later bench;
+your job is to make the protocol work correctly, not to win the bench.
+
+The dual-mode contract (mandatory):
+
+    Cold mode (unchanged from your starting engine):
+        ./engine <tenant_id> [parquet_path]
+        Reads parquet (default or argv[2]), runs the locked query, writes
+        result1.csv to CWD with the model_name,n,p50_ms,p95_ms schema.
+        Exits 0 on success.
+        Cold mode MUST keep working — validate_all.py (and the lockin
+        gate that wraps every engine.cpp edit) drives this path.
+
+    Warm/server mode (new):
+        ./engine --server <parquet_path>
+        Reads parquet ONCE at startup (mmap, hold buffers, whatever you
+        need). Then enters a loop:
+            - Read one tenant_id per line from stdin
+            - Run the locked query for that tenant
+            - Write the CSV result block to stdout in the same schema
+              (header line + body rows ordered by p95_ms DESC)
+            - Write a single line "END\n" as the end-of-result sentinel
+              after the last body row. This is the protocol terminator;
+              the bench harness reads from stdout up to "END\n" per query.
+            - flush stdout after every "END\n" line
+        On stdin EOF: exit 0 cleanly.
+        On a malformed tenant line: write "END\n" with no body rows;
+        do NOT exit. The harness handles "no rows" the same as
+        "tenant has no spans" — both look like an empty CSV body.
+
+Targets:
+    correctness:
+        validate_all.py at {{PARQUET_PATH}} OVERALL: PASS (cold mode)
+        smoke_warm.py at {{PARQUET_PATH}} all 10 queries match (warm mode)
+    performance (loose — bench measures real numbers in step 6):
+        warm-mode pure-query wall median at x100 < 1500 ms
+            (after parquet ingest amortized; first query may be slower)
+        warm-mode peak RSS at x100 < 1500 MB
+            (allows holding the full parquet plus working set)
+        cold-mode wall + RSS unchanged from starting engine ± 20%
+
+Reach correctness on both modes, then yield. Do not chase performance
+beyond the loose targets — the next bench step will measure the real
+numbers; over-optimizing here risks a correctness regression that the
+lockin will revert.
+
+Bench parquets (pre-staged replicas of {{PARQUET_PATH}}), e.g.:
+    <cliff-data-dir>/wildchat-x10.parquet     ( 37 MB,    402k rows)
+    <cliff-data-dir>/wildchat-x100.parquet    (370 MB,    4.0M rows)
+    <cliff-data-dir>/wildchat-x500.parquet    (1.85 GB,    20M rows)
+Each replica preserves tenant_ids ({{VALIDATION_TENANTS_LIST}}) and uses unique
+span_ids/parent_ids per copy. The bench parquet for the target scale is
+{{BENCH_PARQUET_PATH}}.
+
+Cold-mode bench command (unchanged; lockin's best-keeper gate uses this):
+    /usr/bin/time -f "%e %M" ./engine '{{TENANT_ID}}' '{{BENCH_PARQUET_PATH}}'
+
+Warm-mode smoke command (run this yourself before declaring done):
+    uv run python {{MEWS_ROOT}}/infra/smoke_warm.py \
+        --workspace . --parquet '{{PARQUET_PATH}}' \
+        --tenants '{{VALIDATION_TENANTS}}' --n-queries 10
+    Expected output ends with "OVERALL: PASS (10/10)" and exit 0.
+
+Validate command (correctness gate, cold mode):
+    uv run python {{MEWS_ROOT}}/infra/validate_all.py \
+        --workspace . --parquet '{{PARQUET_PATH}}' --tenants '{{VALIDATION_TENANTS}}'
+
+Compile (libarrow build, same as starting engine):
+    g++ -O3 -march=native -std=c++20 -o engine engine.cpp $(pkg-config --cflags --libs arrow parquet)
+
+Iteration loop (suggested):
+    1. Read engine.cpp. Note where main() dispatches on argv. The starting
+       engine has a single code path; you need to add the --server branch.
+    2. Refactor: extract the "run one query for tenant T" inner logic into
+       a function callable from both modes.
+    3. Add the --server branch to main(): parse --server, ingest parquet
+       into long-lived buffers, loop on stdin lines.
+    4. Compile, run validate_all.py to confirm cold mode still PASSes.
+    5. Run smoke_warm.py to confirm warm mode answers correctly.
+    6. Iterate if either gate fails.
+
+Lock-in enforcement (automatic, gated on cold mode only):
+    Every apply_patch on engine.cpp triggers: snapshot → apply → recompile
+    → validate_all.py (cold) → revert if FAIL. The lockin is your safety
+    net for cold-mode regressions — but it does NOT exercise warm mode.
+    YOU are responsible for verifying warm mode via smoke_warm.py before
+    declaring done. If smoke_warm fails after a lockin-PASS edit, the bug
+    is in code only the warm path executes; revert by hand (lockin won't
+    catch it) and try again.
+
+Anti-spec-gaming (the sandbox catches these; do not):
+    - Do NOT modify validate_all.py, validate.py, smoke_warm.py, or any
+      file outside the workspace.
+    - Do NOT run sudo for any reason.
+    - Do NOT assume an OOM unless explicit "Killed" or "MemoryError" appears.
+    - If validation fails, the bug is in your engine, not the validator.
+    - If smoke_warm.py reports a row mismatch, your warm-mode CSV output
+      is wrong — diff it against cold-mode output for the same tenant
+      to localize the bug.
+    - If a tool returns "TOOL_ERROR (recoverable, no state change): ...",
+      the sandbox refused something. Read the message, choose a different
+      approach, do not retry the same call.
+
+Constraints (do not change):
+    - Schema declaration shape.
+    - Locked reference query semantics.
+    - CSV output: model_name,n,p50_ms,p95_ms with header, ordered by p95_ms DESC.
+    - Cold-mode engine CLI: `./engine <tenant_id> [optional parquet_path]`.
+    - Warm-mode engine CLI: `./engine --server <parquet_path>`.
+    - Warm-mode end-of-query sentinel: a single line containing exactly "END".
+
+Turn budget: {{MAX_TURNS}} turns. Reserve final 5 turns for clean shutdown.
+
+Done condition: BOTH gates PASS. Print:
+    STAGE 3 DONE: validate_all=PASS smoke_warm=PASS warm_pure_query_x100=Xms
+and yield.
+
+If you cannot reach both gates within the turn budget: report the last
+good state, confirm cold-mode validate still PASSes (so the engine is
+not broken on the production path), and yield. Better to ship cold-mode
+intact with a non-functional warm path than to ship a regressed cold path.

@@ -1,0 +1,106 @@
+{
+  "version": "0.1.0",
+  "name": "openinference",
+  "description": "OpenInference + OpenTelemetry span schema as surfaced by Arize Phoenix, extended with tenant_id for multi-tenant Phoenix deployments. Faithful to: openinference.span.kind enum, JSON attributes blob with llm.model_name nested by convention, OTel parent/child via parent_id, status_code constrained enum.",
+  "table": "spans",
+  "columns": [
+    {"name": "trace_id",                    "type": "VARCHAR",   "nullable": false, "indexed": true,  "semantic": "OTel trace id; groups spans of one execution"},
+    {"name": "span_id",                     "type": "VARCHAR",   "nullable": false, "primary_key": true},
+    {"name": "parent_id",                   "type": "VARCHAR",   "nullable": true,  "indexed": true,  "semantic": "OTel parent span id; NULL for trace root"},
+    {"name": "name",                        "type": "VARCHAR",   "nullable": false},
+    {"name": "start_time",                  "type": "TIMESTAMP", "nullable": false, "indexed": true,  "semantic": "UTC; derived from OTel nanos-since-epoch"},
+    {"name": "end_time",                    "type": "TIMESTAMP", "nullable": false},
+    {"name": "status_code",                 "type": "VARCHAR",   "nullable": false, "enum": ["OK", "ERROR", "UNSET"]},
+    {"name": "status_message",              "type": "VARCHAR",   "nullable": true},
+    {"name": "span_kind",                   "type": "VARCHAR",   "nullable": false, "indexed": true,  "enum": ["LLM", "EMBEDDING", "CHAIN", "RETRIEVER", "RERANKER", "TOOL", "AGENT", "GUARDRAIL", "EVALUATOR", "PROMPT"], "semantic": "openinference.span.kind required attribute; 10 values per spec, no UNKNOWN"},
+    {"name": "llm_token_count_prompt",      "type": "INTEGER",   "nullable": true,  "semantic": "set when span_kind = LLM"},
+    {"name": "llm_token_count_completion",  "type": "INTEGER",   "nullable": true},
+    {"name": "attributes",                  "type": "JSON",      "nullable": true,  "semantic": "OpenInference + custom attribute blob; nested by convention"},
+    {"name": "tenant_id",                   "type": "VARCHAR",   "nullable": false, "indexed": true,  "semantic": "Mews extension for multi-tenant Phoenix deployments"}
+  ],
+
+  "nested_attributes": [
+    {"path": "$.llm.model_name",            "type": "VARCHAR",    "set_when_span_kind": "LLM",       "expected_cardinality_per_tenant": [1, 8, 50]},
+    {"path": "$.embedding.model_name",      "type": "VARCHAR",    "set_when_span_kind": "EMBEDDING"},
+    {"path": "$.input.value",               "type": "VARCHAR",    "set_when_span_kind": "LLM, AGENT, CHAIN, TOOL, RETRIEVER, GUARDRAIL, EVALUATOR, PROMPT"},
+    {"path": "$.output.value",              "type": "VARCHAR"},
+    {"path": "$.tool.name",                 "type": "VARCHAR",    "set_when_span_kind": "TOOL"},
+    {"path": "$.retrieval.documents",       "type": "JSON_ARRAY", "set_when_span_kind": "RETRIEVER"}
+  ],
+
+  "workload_statistics": {
+    "cardinality_bounds": {
+      "tenants_per_deployment":     {"low": 1,   "median": 3,    "high": 50},
+      "traces_per_tenant_per_day":  {"low": 100, "median": 5000, "high": 500000},
+      "spans_per_trace":            {"low": 1,   "median": 8,    "high": 200},
+      "max_depth_per_trace":        {"low": 1,   "median": 3,    "high": 8}
+    },
+
+    "max_depth_distribution_pmf": {
+      "_comment": "P(max_depth_of_trace = k); sums to 1.0",
+      "1": 0.10,
+      "2": 0.25,
+      "3": 0.30,
+      "4": 0.20,
+      "5": 0.10,
+      "6_plus": 0.05
+    },
+
+    "span_kind_distribution_pmf": {
+      "_comment": "Marginal P(span.span_kind = k) across all spans; sums to 1.0",
+      "AGENT":     0.05,
+      "CHAIN":     0.20,
+      "LLM":       0.35,
+      "TOOL":      0.20,
+      "RETRIEVER": 0.08,
+      "EMBEDDING": 0.04,
+      "PROMPT":    0.03,
+      "RERANKER":  0.02,
+      "GUARDRAIL": 0.02,
+      "EVALUATOR": 0.01
+    },
+
+    "parent_kind_given_child_kind": {
+      "_comment": "P(parent.span_kind = K | child.span_kind = c). Used to validate LLM-under-AGENT is not a degenerate query.",
+      "LLM_child": {"AGENT": 0.30, "CHAIN": 0.40, "RETRIEVER": 0.05, "TOOL": 0.10, "PROMPT": 0.05, "GUARDRAIL": 0.05, "null_root": 0.05}
+    },
+
+    "model_cardinality_per_tenant": {"low": 1, "median": 8, "high": 50},
+
+    "latency_ms_per_kind": {
+      "_distribution_family": "lognormal; (p50, p95, p99) anchor the shape",
+      "LLM":       {"p50": 800,  "p95": 5000,  "p99": 15000},
+      "EMBEDDING": {"p50": 50,   "p95": 200,   "p99": 500},
+      "AGENT":     {"p50": 4000, "p95": 30000, "p99": 90000},
+      "TOOL":      {"p50": 100,  "p95": 1500,  "p99": 5000},
+      "RETRIEVER": {"p50": 200,  "p95": 800,   "p99": 2000},
+      "RERANKER":  {"p50": 80,   "p95": 300,   "p99": 800},
+      "CHAIN":     {"p50": 1000, "p95": 8000,  "p99": 25000},
+      "PROMPT":    {"p50": 5,    "p95": 20,    "p99": 50},
+      "GUARDRAIL": {"p50": 30,   "p95": 100,   "p99": 300},
+      "EVALUATOR": {"p50": 500,  "p95": 2000,  "p99": 6000}
+    },
+
+    "status_code_distribution_pmf": {"OK": 0.92, "ERROR": 0.06, "UNSET": 0.02}
+  },
+
+  "reference_queries": [
+    {
+      "id": "latency_by_model_under_agent",
+      "file": "queries/latency_by_model_under_agent.sql",
+      "description": "p50/p95 latency of LLM-kind spans whose parent is AGENT-kind, grouped by llm.model_name (nested JSON attribute).",
+      "forces": [
+        "parent_child_self_join_on_parent_id",
+        "predicate_on_both_sides_of_join (s.span_kind=LLM AND p.span_kind=AGENT)",
+        "nested_json_attribute_extraction (json_extract_string(attributes, '$.llm.model_name'))",
+        "tenant_scoped_filter"
+      ]
+    }
+  ],
+
+  "sources": {
+    "openinference_semantic_conventions": "https://github.com/Arize-ai/openinference/blob/main/spec/semantic_conventions.md",
+    "phoenix_span_model": "https://github.com/Arize-ai/phoenix/blob/main/src/phoenix/db/models.py",
+    "fetched_on": "2026-04-28"
+  }
+}

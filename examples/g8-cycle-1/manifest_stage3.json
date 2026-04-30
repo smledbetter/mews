@@ -1,0 +1,16 @@
+{
+  "stage": 3,
+  "tenant": "China",
+  "model": "litellm/anthropic/claude-opus-4-6",
+  "max_turns": 75,
+  "workspace": "/home/dev/projects/mews/experiments/gate-8/run-1/cycle-1-correctness/regen-ws",
+  "started_at": "2026-04-30T13:03:50+00:00",
+  "finished_at": "2026-04-30T13:30:01+00:00",
+  "exit_code": 3,
+  "contract_hash": {
+    "schema.sql": "4248511b9c9c697d9a2e1971d7bcecda21f3eeeae4d2b625309e9dfab0e6c017",
+    "schema.json": "4dc65f4c49504e7a2987f3cfccda9e2cc593aee094dc6b17797dcdc449e40fbb",
+    "reference_query.sql": "885e853e87ff15d6b14a0030d7abc59d30507fb076f8514a21a61388737172b8"
+  },
+  "parquet_hash": "d3e4991348b67de31737227110e5f1e930287064d9c20ce330429bcc7239725a"
+}

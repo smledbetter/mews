@@ -1,0 +1,180 @@
+{
+  "cycles": [
+    {
+      "cycle_id": "cycle-1-correctness",
+      "started_at": "2026-04-30T13:03:11+00:00",
+      "finished_at": "2026-04-30T13:30:45+00:00",
+      "wall_s": 1653.69,
+      "pre_report": {
+        "ts_utc": "2026-04-30T13:03:13+00:00",
+        "tenants_checked": [
+          "China",
+          "United States",
+          "Russia"
+        ],
+        "parquet": "/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet",
+        "engine": "/home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine",
+        "schema_status": "MATCH",
+        "schema_drift": {},
+        "correctness_status": "DRIFT",
+        "correctness_drift_per_tenant": {
+          "China": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+          "United States": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+          "Russia": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches"
+        },
+        "perf_status": "UNCHECKED",
+        "perf_engine_ms": null,
+        "perf_duckdb_ms": null,
+        "perf_baseline_engine_ms": null,
+        "perf_baseline_ratio_threshold": 1.5,
+        "regen_recommended": true,
+        "regen_reason": "correctness",
+        "notes": [
+          "correctness drift; perf check skipped"
+        ]
+      },
+      "pre_regen_recommended": true,
+      "pre_regen_reason": "correctness",
+      "regen_exit_code": 3,
+      "regen_wall_s": 1595.91,
+      "regen_cost_usd": 31.3495,
+      "regen_artifact_ok": true,
+      "regen_artifact_msg": "runner.py exit 3: substantive success (MaxTurnsExceeded but artifact validates clean)",
+      "deploy_done": true,
+      "post_report": {
+        "ts_utc": "2026-04-30T13:30:08+00:00",
+        "tenants_checked": [
+          "China",
+          "United States",
+          "Russia"
+        ],
+        "parquet": "/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet",
+        "engine": "/home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine",
+        "schema_status": "MATCH",
+        "schema_drift": {},
+        "correctness_status": "MATCH",
+        "correctness_drift_per_tenant": {
+          "China": "PASS: OK: 2 rows match within rel_tol=0.001",
+          "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+          "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+        },
+        "perf_status": "OK",
+        "perf_engine_ms": 167.80828300397843,
+        "perf_duckdb_ms": 626.356,
+        "perf_baseline_engine_ms": null,
+        "perf_baseline_ratio_threshold": 1.5,
+        "regen_recommended": false,
+        "regen_reason": "none",
+        "notes": [
+          "engine_ms / duckdb_ms = 0.27 (threshold 1.5); engine still beats DuckDB"
+        ]
+      },
+      "post_regen_recommended": false,
+      "cycle_closed": true,
+      "abort_reason": null
+    },
+    {
+      "cycle_id": "baseline-1",
+      "started_at": "2026-04-30T13:30:45+00:00",
+      "finished_at": "2026-04-30T13:31:22+00:00",
+      "wall_s": 37.03,
+      "pre_report": {
+        "ts_utc": "2026-04-30T13:30:45+00:00",
+        "tenants_checked": [
+          "China",
+          "United States",
+          "Russia"
+        ],
+        "parquet": "/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet",
+        "engine": "/home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine",
+        "schema_status": "MATCH",
+        "schema_drift": {},
+        "correctness_status": "MATCH",
+        "correctness_drift_per_tenant": {
+          "China": "PASS: OK: 2 rows match within rel_tol=0.001",
+          "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+          "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+        },
+        "perf_status": "OK",
+        "perf_engine_ms": 182.72616702597588,
+        "perf_duckdb_ms": 649.834,
+        "perf_baseline_engine_ms": null,
+        "perf_baseline_ratio_threshold": 1.5,
+        "regen_recommended": false,
+        "regen_reason": "none",
+        "notes": [
+          "engine_ms / duckdb_ms = 0.28 (threshold 1.5); engine still beats DuckDB"
+        ]
+      },
+      "pre_regen_recommended": false,
+      "pre_regen_reason": "none",
+      "regen_exit_code": null,
+      "regen_wall_s": null,
+      "regen_cost_usd": null,
+      "regen_artifact_ok": null,
+      "regen_artifact_msg": null,
+      "deploy_done": false,
+      "post_report": null,
+      "post_regen_recommended": null,
+      "cycle_closed": true,
+      "abort_reason": null
+    },
+    {
+      "cycle_id": "cycle-2-cardinality",
+      "started_at": "2026-04-30T13:31:22+00:00",
+      "finished_at": "2026-04-30T13:58:49+00:00",
+      "wall_s": 1646.9,
+      "pre_report": {
+        "ts_utc": "2026-04-30T13:31:22+00:00",
+        "tenants_checked": [
+          "China",
+          "United States",
+          "Russia"
+        ],
+        "parquet": "/home/dev/projects/mews/experiments/gate-6/inducers/wildchat-x1-china-10x.parquet",
+        "engine": "/home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine",
+        "schema_status": "MATCH",
+        "schema_drift": {},
+        "correctness_status": "DRIFT",
+        "correctness_drift_per_tenant": {
+          "China": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+          "United States": "PASS: OK: 2 rows match within rel_tol=0.001",
+          "Russia": "PASS: OK: 2 rows match within rel_tol=0.001"
+        },
+        "perf_status": "UNCHECKED",
+        "perf_engine_ms": null,
+        "perf_duckdb_ms": null,
+        "perf_baseline_engine_ms": null,
+        "perf_baseline_ratio_threshold": 1.5,
+        "regen_recommended": true,
+        "regen_reason": "correctness",
+        "notes": [
+          "correctness drift; perf check skipped"
+        ]
+      },
+      "pre_regen_recommended": true,
+      "pre_regen_reason": "correctness",
+      "regen_exit_code": 1,
+      "regen_wall_s": 1632.34,
+      "regen_cost_usd": 18.1173,
+      "regen_artifact_ok": false,
+      "regen_artifact_msg": "validate_all.py at x1 did not PASS",
+      "deploy_done": false,
+      "post_report": null,
+      "post_regen_recommended": null,
+      "cycle_closed": false,
+      "abort_reason": "regen artifact failed substantive validation"
+    }
+  ],
+  "total_cycles": 3,
+  "cycles_closed": 2,
+  "total_cost_usd": 49.4668,
+  "total_wall_s": 3337.62,
+  "orchestrator": "gate-8-v1",
+  "status": "killed_at_cycle_2",
+  "kill_threshold_usd": 200.0,
+  "args": {
+    "run_dir": "/home/dev/projects/mews/experiments/gate-8/run-1",
+    "skip_baseline_checks": false
+  }
+}

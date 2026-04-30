@@ -1,0 +1,28 @@
+{
+  "ts_utc": "2026-04-30T13:03:13+00:00",
+  "tenants_checked": [
+    "China",
+    "United States",
+    "Russia"
+  ],
+  "parquet": "/home/dev/projects/mews/experiments/gate-4/cliff-probe/parquet/wildchat-x10.parquet",
+  "engine": "/home/dev/projects/mews/experiments/gate-8/run-1/deployed/engine",
+  "schema_status": "MATCH",
+  "schema_drift": {},
+  "correctness_status": "DRIFT",
+  "correctness_drift_per_tenant": {
+    "China": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+    "United States": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches",
+    "Russia": "FAIL: DIFF: 0 only-ref, 0 only-eng, 2 value mismatches"
+  },
+  "perf_status": "UNCHECKED",
+  "perf_engine_ms": null,
+  "perf_duckdb_ms": null,
+  "perf_baseline_engine_ms": null,
+  "perf_baseline_ratio_threshold": 1.5,
+  "regen_recommended": true,
+  "regen_reason": "correctness",
+  "notes": [
+    "correctness drift; perf check skipped"
+  ]
+}

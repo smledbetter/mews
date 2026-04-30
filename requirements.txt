@@ -1,0 +1,16 @@
+# Core orchestrator + drift detector + validators
+pyarrow>=15.0
+duckdb>=1.0
+pandas>=2.0
+
+# LLM-driven Stage-3 synthesis
+litellm>=1.40
+openai-agents>=0.0.16  # Anthropic via LiteLLM
+
+# Data adapters (download paths reproduced via adapters/*/adapt.py)
+datasets>=2.18              # WildChat
+huggingface_hub>=0.20       # SWE-rebench direct parquet download
+requests>=2.31              # HELM scenario_state.json over HTTPS
+
+# Statistical scaffold for benches
+numpy>=1.26

@@ -1,0 +1,48 @@
+Stage 2 of 3: base implementation.
+
+Implement the bespoke C++ engine that executes the locked reference query against the parquet at `{{PARQUET_PATH}}`. The storage plan from stage 1 is already in your workspace at `storage_plan.txt` — read it ONCE in full and use it as your guide.
+
+You have {{MAX_TURNS}} turns. Read at most 5 files before starting to write code. Each turn that does not move you closer to a compiled, correct binary costs you. Specifically:
+- Turns 1-3: read storage_plan.txt and any reference files. Stop reading by turn 5 at the latest.
+- Turns 5-30: write the C++ source via apply_patch. Single-file is fine; multi-file is fine.
+- Turns 30-50: compile via the shell tool, fix errors, recompile.
+- Turns 50-70: run the engine on `{{PARQUET_PATH}}` for ALL the validation tenants ({{VALIDATION_TENANTS_LIST}}) and confirm multi-tenant correctness with the validator below.
+- Reserve final turns for clean shutdown.
+
+Concrete specifications:
+1. Build target: `engine` (a single executable in your workspace).
+2. CLI: `./engine <tenant_id>`. The synthesis target tenant is `{{TENANT_ID}}`. Example: `./engine '{{TENANT_ID}}'`. **Tenant ids may contain spaces** (e.g. `'United States'`) — quote them when passing on the command line.
+3. Reads: `{{PARQUET_PATH}}` (Apache Arrow parquet via libarrow / libparquet — `pkg-config --cflags --libs arrow parquet` is your friend).
+4. Writes: `result1.csv` in the current working directory, columns `model_name,n,p50_ms,p95_ms` with header, ordered by `p95_ms DESC`.
+5. Compile command suggestion: `g++ -O3 -march=native -std=c++20 -o engine $(SOURCES) $(pkg-config --cflags --libs arrow parquet)`.
+
+Validation: after a successful compile, run the multi-tenant validator from your workspace, **passing the parquet path and the validation tenants explicitly**:
+
+    uv run python {{MEWS_ROOT}}/infra/validate_all.py \
+        --workspace . \
+        --parquet '{{PARQUET_PATH}}' \
+        --tenants '{{VALIDATION_TENANTS}}'
+
+It invokes `./engine` for each validation tenant in turn, diffs each against DuckDB, and prints `OVERALL: PASS (all N tenants match DuckDB reference)` on success (where N = number of validation tenants). Treat its output as the truth. The single-tenant `validate.py` is still available for narrower spot-checks but is **not** the gate — only `validate_all.py` with the right `--parquet` and `--tenants` satisfies it.
+
+If you run `validate_all.py` without `--parquet` and `--tenants`, it falls back to a synthetic Gate-1 fixture that is unrelated to your real data, will not exist on this run's parquet, and will report empty/wrong results. **Always pass both flags.**
+
+The Mews runner runs `validate_all.py` (with the right `--parquet` and `--tenants` for this run) after this stage; if it doesn't return `OVERALL: PASS`, the stage fails regardless of what you printed.
+
+(If your workspace sandbox restricts writes to the default uv cache dir, set `UV_CACHE_DIR=/tmp/uv_cache` on every validator invocation.)
+
+**If validation fails or behaves unexpectedly, the issue is in your engine — not in the validator, the test environment, or system memory.** Specifically:
+- **Do NOT modify** `infra/validate.py`, `infra/validate_all.py`, or any file outside your workspace. The workspace sandbox will refuse, and the refusal does not mean "try harder to bypass it" — it means "you are reaching for the wrong fix."
+- **Do NOT run `sudo`** for any reason (drop_caches, install packages, change permissions, etc.). The shell sandbox will refuse. There is no scenario in which Stage 2 needs sudo.
+- **Do NOT assume an OOM unless you see explicit evidence** — `Killed` in stderr, an `MemoryError` traceback, or a non-zero exit with an OOM message. `validate_all.py` peaks at ~100 MB RSS on this workload across all validation tenants combined; it does not OOM. If your engine crashes during validation, the engine is wrong, not the validator.
+- **Do NOT edit `validate.py` to set DuckDB `memory_limit` or `threads`** to "make the validator happy." The validator is the truth; tuning it is moving the goalposts.
+- **If a tool call comes back `TOOL_ERROR (recoverable, no state change)`**: the sandbox refused something. Read the message. Choose a different approach — re-reading the file, narrowing the failing tenant, or adjusting your engine. Do not retry the same call.
+
+When you see a validation failure, the productive loop is: re-read `engine.cpp`, identify which tenant fails, run `./engine 'TENANT'` directly to inspect its output, compare against DuckDB's reference output for that tenant, and patch your engine.
+
+The locked query for reference (do not deviate from this semantics — your engine must match its output):
+```sql
+{{REFERENCE_QUERY_SQL}}
+```
+
+When `validate_all.py` reports `OVERALL: PASS (all N tenants match DuckDB reference)` on the validation tenants above, you are done with this stage. Print a one-line summary like `STAGE 2 DONE: engine compiles, multi-tenant validate_all.py PASS` and yield.
